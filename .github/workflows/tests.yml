@@ -31,4 +31,4 @@ jobs:
           docker run --rm \
             -e APP_KEY='base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' \
             my-app-backend:test \
-            ./vendor/bin/phpunit
+            ./vendor/bin/phpunit --testdox
