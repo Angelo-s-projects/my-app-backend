@@ -1,10 +1,14 @@
+
 name: Laravel Tests
 
 on:
   push:
-    branches: [main]
+    branches:
+      - '**'
   pull_request:
-    branches: [main]
+    branches:
+      - develop
+      - main
 
 jobs:
   tests:
