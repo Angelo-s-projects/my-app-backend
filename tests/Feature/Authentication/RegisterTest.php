@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Api;
+namespace Tests\Feature\Authentication;
 
 use App\Models\User;
 use PHPUnit\Framework\Attributes\DataProvider;
