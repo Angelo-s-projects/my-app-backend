@@ -14,7 +14,7 @@ tags:
   - name: Users
     description: User management
   - name: Authentication
-    description: User registration
+    description: User registration and email-based authentication
 
 paths:
   /api/users:
@@ -85,6 +85,93 @@ paths:
                         - The first name field is required.
                       email:
                         - The email has already been taken.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/send-login-code:
+    post:
+      tags:
+        - Authentication
+      summary: Send login code
+      description: Sends a 5-digit login code to the provided email address. Returns the same response whether or not the account exists.
+      operationId: sendLoginCode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendLoginCodeRequest'
+            example:
+              email: john.doe@example.com
+      responses:
+        '200':
+          description: Login code request processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: If the account exists, a login code has been sent.
+        '422':
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaravelValidationError'
+              example:
+                message: The email field must be a valid email address.
+                errors:
+                  email:
+                    - The email field must be a valid email address.
+        '429':
+          description: Too many login code requests. The user must wait 5 minutes before requesting another code.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: Too many resend attempts. Please try again in 5 minutes.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/login:
+    post:
+      tags:
+        - Authentication
+      summary: Log in with email code
+      description: Authenticates a user using their email address and 5-digit login code. The code can only be used once.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: john.doe@example.com
+              code: '12345'
+      responses:
+        '200':
+          description: Login successful. Returns the user and a Sanctum access token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccess'
+              example:
+                user:
+                  id: 1
+                  first_name: John
+                  last_name: Doe
+                  email: john.doe@example.com
+                token: 1|exampleSanctumToken
+        '422':
+          description: The login code is invalid, expired, or the credentials are incorrect.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: The login code is invalid or expired.
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -207,6 +294,55 @@ components:
       required:
         - code
 
+    SendLoginCodeRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+      required:
+        - email
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: john.doe@example.com
+        code:
+          type: string
+          minLength: 5
+          maxLength: 5
+          pattern: '^\d{5}$'
+          example: '12345'
+      required:
+        - email
+        - code
+
+    LoginSuccess:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: Laravel Sanctum personal access token.
+          example: 1|exampleSanctumToken
+      required:
+        - user
+        - token
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Request processed successfully.
+      required:
+        - message
+
     ValidationError:
       type: object
       properties:
@@ -224,6 +360,22 @@ components:
               - The email has already been taken.
       required:
         - code
+        - errors
+
+    LaravelValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: The given data was invalid.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+        - message
         - errors
 
     ApiError:
