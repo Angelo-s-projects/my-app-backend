@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Authentication;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginCodeRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Responses\ApiResponse;
 use App\Mail\LoginCodeMail;
@@ -23,42 +24,46 @@ class AuthenticationController extends Controller
         );
     }
 
-    public function send(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-        ]);
+  public function sendLoginCode(LoginCodeRequest $request): JsonResponse
+{
+    $validated = $request->validated();
 
-        $user = User::where('email', $validated['email'])->first();
+    $user = User::where('email', $validated['email'])->first();
 
-        if (! $user) {
-            return $this->loginCodeResponse();
-        }
-
-        $loginCode = $user->loginCode;
-
-        if ($loginCode?->isBlocked()) {
-            return response()->json([
-                'message' => 'Too many resend attempts. Please try again in 5 minutes.',
-            ], 429);
-        }
-
-        $code = $loginCode
-            ? $loginCode->replaceCode()
-            : $user->createLoginCode();
-
-        if (! $code) {
-            return response()->json([
-                'message' => 'Too many resend attempts. Please try again in 5 minutes.',
-            ], 429);
-        }
-
-        Mail::to($user->email)->send(
-            new LoginCodeMail($code)
+    if (! $user) {
+        return ApiResponse::success(
+            code: 'LOGIN_CODE_SENT',
         );
-
-        return $this->loginCodeResponse();
     }
+
+    $loginCode = $user->loginCode;
+
+    if ($loginCode?->isBlocked()) {
+        return ApiResponse::error(
+            code: 'LOGIN_CODE_RESEND_LIMIT_EXCEEDED',
+            status: 429,
+        );
+    }
+
+    $code = $loginCode
+        ? $loginCode->replaceCode()
+        : $user->createLoginCode();
+
+    if (! $code) {
+        return ApiResponse::error(
+            code: 'LOGIN_CODE_RESEND_LIMIT_EXCEEDED',
+            status: 429,
+        );
+    }
+
+    Mail::to($user->email)->send(
+        new LoginCodeMail($code)
+    );
+
+    return ApiResponse::success(
+        code: 'LOGIN_CODE_SENT',
+    );
+}
 
     public function login(Request $request): JsonResponse
     {
@@ -70,28 +75,25 @@ class AuthenticationController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if (! $user || ! $user->loginCode?->verify($validated['code'])) {
-            return response()->json([
-                'message' => 'The login code is invalid or expired.',
-            ], 422);
+            return ApiResponse::error(
+                code: 'INVALID_OR_EXPIRED_LOGIN_CODE',
+                status: 422,
+            );
         }
 
         $token = $user->createToken('mobile-app')->plainTextToken;
 
-        return response()->json([
-            'user' => [
-                'id' => $user->id,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'email' => $user->email,
+        return ApiResponse::success(
+            code: 'LOGIN_SUCCESSFUL',
+            data: [
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                ],
+                'token' => $token,
             ],
-            'token' => $token,
-        ]);
-    }
-
-    private function loginCodeResponse(): JsonResponse
-    {
-        return response()->json([
-            'message' => 'If the account exists, a login code has been sent.',
-        ]);
+        );
     }
 }
