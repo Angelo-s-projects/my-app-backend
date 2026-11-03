@@ -33,7 +33,7 @@ jobs:
       - name: Check code style
         run: |
           docker run --rm my-app-backend:test \
-            composer test:style
+            ./vendor/bin/pint --test
 
       - name: Run PHPUnit
         run: |
