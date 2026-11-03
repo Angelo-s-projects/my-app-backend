@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Testing\TestResponse;
@@ -31,5 +32,14 @@ abstract class TestCase extends BaseTestCase
         $response->assertStatus($status);
 
         return $response;
+    }
+
+    protected function createUser(array $attributes = []): User
+    {
+        return User::factory()->create(array_merge([
+            'first_name' => fake()->firstName(),
+            'last_name' => fake()->lastName(),
+            'email' => fake()->unique()->safeEmail(),
+        ], $attributes));
     }
 }

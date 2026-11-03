@@ -1,8 +1,7 @@
 <?php
 
-namespace Tests\Feature\Api;
+namespace Tests\Feature\Authentication;
 
-use App\Models\User;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -28,7 +27,6 @@ class RegisterTest extends TestCase
         $this->postEndpoint(
             self::REGISTER_ENDPOINT,
             $this->registrationData,
-            
             201
         )->assertExactJson([
             'code' => 'REGISTRATION_SUCCESSFUL',
@@ -76,7 +74,7 @@ class RegisterTest extends TestCase
 
     public function test_registration_rejects_an_existing_email(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createUser();
 
         $this->postEndpoint(
             self::REGISTER_ENDPOINT,
