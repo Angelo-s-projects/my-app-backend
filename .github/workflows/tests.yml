@@ -12,7 +12,7 @@ on:
 
 jobs:
   tests:
-    name: Run PHPUnit
+    name: Run Pint & PHPUnit
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +29,11 @@ jobs:
           file: Dockerfile.test
           tags: my-app-backend:test
           load: true
+
+      - name: Check code style
+        run: |
+          docker run --rm my-app-backend:test \
+            ./vendor/bin/pint --test
 
       - name: Run PHPUnit
         run: |

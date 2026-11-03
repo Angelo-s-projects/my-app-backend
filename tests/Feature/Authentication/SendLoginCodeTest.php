@@ -146,20 +146,20 @@ class SendLoginCodeTest extends TestCase
             'code' => $code,
         ]);
 
-      $response->assertJsonStructure([
-    'code',
-    'data' => [
-        'user' => [
-            'id',
-            'first_name',
-            'last_name',
-            'email',
-        ],
-        'token',
-    ],
-]);
+        $response->assertJsonStructure([
+            'code',
+            'data' => [
+                'user' => [
+                    'id',
+                    'first_name',
+                    'last_name',
+                    'email',
+                ],
+                'token',
+            ],
+        ]);
 
-$response->assertJsonPath('code', 'LOGIN_SUCCESSFUL');
+        $response->assertJsonPath('code', 'LOGIN_SUCCESSFUL');
         $this->assertDatabaseMissing('login_codes', [
             'user_id' => $this->user->id,
         ]);
