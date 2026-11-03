@@ -77,21 +77,6 @@ class LoginCode extends Model
         );
     }
 
-    public function verify(string $code): bool
-    {
-        if (
-            $this->isBlocked()
-            || now()->greaterThanOrEqualTo($this->expires_at)
-            || ! Hash::check($code, $this->code)
-        ) {
-            return false;
-        }
-
-        $this->delete();
-
-        return true;
-    }
-
     private function generateAndSaveCode(int $resendAttempts): string
     {
         $code = $this->generateCode();
