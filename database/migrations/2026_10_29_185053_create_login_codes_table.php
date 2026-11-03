@@ -12,20 +12,20 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('login_codes', function (Blueprint $table) {
-    $table->id();
+            $table->id();
 
-    $table->foreignId('user_id')
-        ->unique()
-        ->constrained()
-        ->cascadeOnDelete();
+            $table->foreignId('user_id')
+                ->unique()
+                ->constrained()
+                ->cascadeOnDelete();
 
-    $table->string('code');
-    $table->timestamp('expires_at');
-    $table->unsignedTinyInteger('resend_attempts')->default(0);
-    $table->timestamp('blocked_until')->nullable();
+            $table->string('code');
+            $table->timestamp('expires_at');
+            $table->unsignedTinyInteger('resend_attempts')->default(0);
+            $table->timestamp('blocked_until')->nullable();
 
-    $table->timestamps();
-});
+            $table->timestamps();
+        });
     }
 
     /**

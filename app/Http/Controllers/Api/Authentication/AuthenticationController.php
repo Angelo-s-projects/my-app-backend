@@ -24,46 +24,46 @@ class AuthenticationController extends Controller
         );
     }
 
-  public function sendLoginCode(LoginCodeRequest $request): JsonResponse
-{
-    $validated = $request->validated();
+    public function sendLoginCode(LoginCodeRequest $request): JsonResponse
+    {
+        $validated = $request->validated();
 
-    $user = User::where('email', $validated['email'])->first();
+        $user = User::where('email', $validated['email'])->first();
 
-    if (! $user) {
+        if (! $user) {
+            return ApiResponse::success(
+                code: 'LOGIN_CODE_SENT',
+            );
+        }
+
+        $loginCode = $user->loginCode;
+
+        if ($loginCode?->isBlocked()) {
+            return ApiResponse::error(
+                code: 'LOGIN_CODE_RESEND_LIMIT_EXCEEDED',
+                status: 429,
+            );
+        }
+
+        $code = $loginCode
+            ? $loginCode->replaceCode()
+            : $user->createLoginCode();
+
+        if (! $code) {
+            return ApiResponse::error(
+                code: 'LOGIN_CODE_RESEND_LIMIT_EXCEEDED',
+                status: 429,
+            );
+        }
+
+        Mail::to($user->email)->send(
+            new LoginCodeMail($code)
+        );
+
         return ApiResponse::success(
             code: 'LOGIN_CODE_SENT',
         );
     }
-
-    $loginCode = $user->loginCode;
-
-    if ($loginCode?->isBlocked()) {
-        return ApiResponse::error(
-            code: 'LOGIN_CODE_RESEND_LIMIT_EXCEEDED',
-            status: 429,
-        );
-    }
-
-    $code = $loginCode
-        ? $loginCode->replaceCode()
-        : $user->createLoginCode();
-
-    if (! $code) {
-        return ApiResponse::error(
-            code: 'LOGIN_CODE_RESEND_LIMIT_EXCEEDED',
-            status: 429,
-        );
-    }
-
-    Mail::to($user->email)->send(
-        new LoginCodeMail($code)
-    );
-
-    return ApiResponse::success(
-        code: 'LOGIN_CODE_SENT',
-    );
-}
 
     public function login(Request $request): JsonResponse
     {

@@ -8,13 +8,12 @@ use Psy\Exception\RuntimeException;
 
 class UserSeeder extends Seeder
 {
-  public function run(): void
-{
-    User::factory()->count(10)->create();
+    public function run(): void
+    {
+        User::factory()->count(10)->create();
 
-    $this->createLocalUser();
-}
-
+        $this->createLocalUser();
+    }
 
     private function createLocalUser(): void
     {

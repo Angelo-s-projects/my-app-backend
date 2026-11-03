@@ -2,16 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class LoginCode extends Model
 {
-
     use HasFactory;
-    
+
     private const CODE_EXPIRY_MINUTES = 5;
 
     private const MAX_RESENDS = 3;
