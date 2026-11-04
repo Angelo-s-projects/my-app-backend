@@ -4,7 +4,7 @@ openapi: 3.0.3
 info:
   title: My App API
   version: 1.0.0
-  description: API documentation for user management and authentication.
+  description: API documentation for user management and email-based authentication.
 
 servers:
   - url: http://localhost:8080
@@ -93,7 +93,11 @@ paths:
       tags:
         - Authentication
       summary: Send login code
-      description: Sends a 5-digit login code to the provided email address. Returns the same response whether or not the account exists.
+      description: >
+        Generates and sends a 5-digit login code to the provided email address.
+        Returns the same success response whether or not the account exists.
+        Replaces an existing login code when one is already present.
+        Limits repeated resend attempts and temporarily blocks further requests.
       operationId: sendLoginCode
       requestBody:
         required: true
@@ -109,9 +113,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                $ref: '#/components/schemas/ApiSuccess'
               example:
-                message: If the account exists, a login code has been sent.
+                code: LOGIN_CODE_SENT
         '422':
           description: Validation failed.
           content:
@@ -119,18 +123,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/LaravelValidationError'
               example:
-                message: The email field must be a valid email address.
+                message: The given data was invalid.
                 errors:
                   email:
                     - The email field must be a valid email address.
         '429':
-          description: Too many login code requests. The user must wait 5 minutes before requesting another code.
+          description: Too many login code resend attempts. The user must wait 5 minutes before requesting another code.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                $ref: '#/components/schemas/ApiErrorResponse'
               example:
-                message: Too many resend attempts. Please try again in 5 minutes.
+                code: LOGIN_CODE_RESEND_LIMIT_EXCEEDED
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -139,7 +143,10 @@ paths:
       tags:
         - Authentication
       summary: Log in with email code
-      description: Authenticates a user using their email address and 5-digit login code. The code can only be used once.
+      description: >
+        Authenticates a user using a valid, unexpired 5-digit login code.
+        The code can only be used once. The email address is not required
+        during login because the code is matched against stored login codes.
       operationId: loginUser
       requestBody:
         required: true
@@ -148,30 +155,26 @@ paths:
             schema:
               $ref: '#/components/schemas/LoginRequest'
             example:
-              email: john.doe@example.com
               code: '12345'
       responses:
         '200':
-          description: Login successful. Returns the user and a Sanctum access token.
+          description: Login successful. Returns a Sanctum access token.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginSuccess'
               example:
-                user:
-                  id: 1
-                  first_name: John
-                  last_name: Doe
-                  email: john.doe@example.com
-                token: 1|exampleSanctumToken
+                code: LOGIN_SUCCESSFUL
+                data:
+                  token: 1|exampleSanctumToken
         '422':
-          description: The login code is invalid, expired, or the credentials are incorrect.
+          description: The login code is invalid or expired.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageResponse'
+                $ref: '#/components/schemas/ApiErrorResponse'
               example:
-                message: The login code is invalid or expired.
+                code: INVALID_OR_EXPIRED_LOGIN_CODE
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -307,10 +310,6 @@ components:
     LoginRequest:
       type: object
       properties:
-        email:
-          type: string
-          format: email
-          example: john.doe@example.com
         code:
           type: string
           minLength: 5
@@ -318,30 +317,44 @@ components:
           pattern: '^\d{5}$'
           example: '12345'
       required:
-        - email
         - code
 
     LoginSuccess:
       type: object
       properties:
-        user:
-          $ref: '#/components/schemas/User'
-        token:
+        code:
           type: string
-          description: Laravel Sanctum personal access token.
-          example: 1|exampleSanctumToken
+          example: LOGIN_SUCCESSFUL
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+              description: Laravel Sanctum personal access token.
+              example: 1|exampleSanctumToken
+          required:
+            - token
       required:
-        - user
-        - token
+        - code
+        - data
 
-    MessageResponse:
+    ApiSuccess:
       type: object
       properties:
-        message:
+        code:
           type: string
-          example: Request processed successfully.
+          example: LOGIN_CODE_SENT
       required:
-        - message
+        - code
+
+    ApiErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: INVALID_OR_EXPIRED_LOGIN_CODE
+      required:
+        - code
 
     ValidationError:
       type: object

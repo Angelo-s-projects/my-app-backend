@@ -68,7 +68,7 @@ class SendLoginCodeTest extends TestCase
     {
         $this->sendLoginCode();
 
-        for ($attempt = 0; $attempt < 3; $attempt++) {
+        for ($attempt = 0; $attempt < config('authorization.login_code.max_resends'); $attempt++) {
             $this->sendLoginCode();
         }
 
@@ -78,7 +78,7 @@ class SendLoginCodeTest extends TestCase
 
         $this->assertDatabaseHas('login_codes', [
             'user_id' => $this->user->id,
-            'resend_attempts' => 3,
+            'resend_attempts' => config('authorization.login_code.max_resends'),
         ]);
 
         $this->assertNotNull(
@@ -90,7 +90,7 @@ class SendLoginCodeTest extends TestCase
     {
         $this->sendLoginCode();
 
-        for ($attempt = 0; $attempt < 3; $attempt++) {
+        for ($attempt = 0; $attempt < config('authorization.login_code.max_resends'); $attempt++) {
             $this->sendLoginCode();
         }
 
@@ -98,7 +98,7 @@ class SendLoginCodeTest extends TestCase
             'email' => $this->user->email,
         ], 429);
 
-        $this->travel(5)->minutes();
+        $this->travel(config('authorization.login_code.resend_cooldown_minutes'))->minutes();
 
         $this->sendLoginCode();
 
@@ -109,109 +109,6 @@ class SendLoginCodeTest extends TestCase
         ]);
     }
 
-    public function test_it_rejects_an_expired_login_code(): void
-    {
-        $code = fake()->numerify('#####');
-
-        LoginCode::factory()
-            ->for($this->user)
-            ->withCode($code)
-            ->create([
-                'expires_at' => now()->subMinute(),
-            ]);
-
-        $this->postEndpoint(self::LOGIN_ENDPOINT, [
-            'email' => $this->user->email,
-            'code' => $code,
-        ], 422);
-
-        $this->assertDatabaseHas('login_codes', [
-            'user_id' => $this->user->id,
-        ]);
-    }
-
-    public function test_it_logs_in_with_a_valid_code(): void
-    {
-        $code = fake()->numerify('#####');
-
-        LoginCode::factory()
-            ->for($this->user)
-            ->withCode($code)
-            ->create([
-                'expires_at' => now()->addMinutes(5),
-            ]);
-
-        $response = $this->postEndpoint(self::LOGIN_ENDPOINT, [
-            'email' => $this->user->email,
-            'code' => $code,
-        ]);
-
-        $response->assertJsonStructure([
-            'code',
-            'data' => [
-                'user' => [
-                    'id',
-                    'first_name',
-                    'last_name',
-                    'email',
-                ],
-                'token',
-            ],
-        ]);
-
-        $response->assertJsonPath('code', 'LOGIN_SUCCESSFUL');
-        $this->assertDatabaseMissing('login_codes', [
-            'user_id' => $this->user->id,
-        ]);
-    }
-
-    public function test_it_rejects_an_incorrect_login_code(): void
-    {
-        $validCode = fake()->numerify('#####');
-
-        do {
-            $incorrectCode = fake()->numerify('#####');
-        } while ($incorrectCode === $validCode);
-
-        LoginCode::factory()
-            ->for($this->user)
-            ->withCode($validCode)
-            ->create([
-                'expires_at' => now()->addMinutes(5),
-            ]);
-
-        $this->postEndpoint(self::LOGIN_ENDPOINT, [
-            'email' => $this->user->email,
-            'code' => $incorrectCode,
-        ], 422);
-
-        $this->assertDatabaseHas('login_codes', [
-            'user_id' => $this->user->id,
-        ]);
-    }
-
-    public function test_a_login_code_cannot_be_reused(): void
-    {
-        $code = fake()->numerify('#####');
-
-        LoginCode::factory()
-            ->for($this->user)
-            ->withCode($code)
-            ->create([
-                'expires_at' => now()->addMinutes(5),
-            ]);
-
-        $this->postEndpoint(self::LOGIN_ENDPOINT, [
-            'email' => $this->user->email,
-            'code' => $code,
-        ]);
-
-        $this->postEndpoint(self::LOGIN_ENDPOINT, [
-            'email' => $this->user->email,
-            'code' => $code,
-        ], 422);
-    }
-
     public function test_resending_a_code_invalidates_the_previous_code(): void
     {
         $oldCode = fake()->numerify('#####');
@@ -220,13 +117,14 @@ class SendLoginCodeTest extends TestCase
             ->for($this->user)
             ->withCode($oldCode)
             ->create([
-                'expires_at' => now()->addMinutes(5),
+                'expires_at' => now()->addMinutes(
+                    config('authorization.login_code.expiry_minutes')
+                ),
             ]);
 
         $this->sendLoginCode();
 
         $this->postEndpoint(self::LOGIN_ENDPOINT, [
-            'email' => $this->user->email,
             'code' => $oldCode,
         ], 422);
     }

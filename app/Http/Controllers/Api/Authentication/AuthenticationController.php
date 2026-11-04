@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api\Authentication;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginCodeRequest;
+use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Responses\ApiResponse;
 use App\Mail\LoginCodeMail;
+use App\Models\LoginCode;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
 class AuthenticationController extends Controller
@@ -65,33 +67,37 @@ class AuthenticationController extends Controller
         );
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'email' => ['required', 'email'],
-            'code' => ['required', 'string', 'regex:/^\d{5}$/'],
-        ]);
+        $validated = $request->validated();
 
-        $user = User::where('email', $validated['email'])->first();
+        $loginCodes = LoginCode::query()
+            ->where('expires_at', '>', now())
+            ->get();
 
-        if (! $user || ! $user->loginCode?->verify($validated['code'])) {
+        $loginCode = $loginCodes->first(
+            fn (LoginCode $loginCode) => Hash::check(
+                $validated['code'],
+                $loginCode->code,
+            )
+        );
+
+        if (! $loginCode || ! $loginCode->user) {
             return ApiResponse::error(
                 code: 'INVALID_OR_EXPIRED_LOGIN_CODE',
                 status: 422,
             );
         }
 
+        $user = $loginCode->user;
+
+        $loginCode->delete();
+
         $token = $user->createToken('mobile-app')->plainTextToken;
 
         return ApiResponse::success(
             code: 'LOGIN_SUCCESSFUL',
             data: [
-                'user' => [
-                    'id' => $user->id,
-                    'first_name' => $user->first_name,
-                    'last_name' => $user->last_name,
-                    'email' => $user->email,
-                ],
                 'token' => $token,
             ],
         );

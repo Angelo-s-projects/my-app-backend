@@ -11,12 +11,6 @@ class LoginCode extends Model
 {
     use HasFactory;
 
-    private const CODE_EXPIRY_MINUTES = 5;
-
-    private const MAX_RESENDS = 3;
-
-    private const RESEND_COOLDOWN_MINUTES = 5;
-
     protected $fillable = [
         'code',
         'expires_at',
@@ -62,10 +56,10 @@ class LoginCode extends Model
             return null;
         }
 
-        if ($this->resend_attempts >= self::MAX_RESENDS) {
+        if ($this->resend_attempts >= config('authorization.login_code.max_resends')) {
             $this->update([
                 'blocked_until' => now()->addMinutes(
-                    self::RESEND_COOLDOWN_MINUTES
+                    config('authorization.login_code.resend_cooldown_minutes')
                 ),
             ]);
 
@@ -77,28 +71,15 @@ class LoginCode extends Model
         );
     }
 
-    public function verify(string $code): bool
-    {
-        if (
-            $this->isBlocked()
-            || now()->greaterThanOrEqualTo($this->expires_at)
-            || ! Hash::check($code, $this->code)
-        ) {
-            return false;
-        }
-
-        $this->delete();
-
-        return true;
-    }
-
     private function generateAndSaveCode(int $resendAttempts): string
     {
         $code = $this->generateCode();
 
         $this->update([
             'code' => Hash::make($code),
-            'expires_at' => now()->addMinutes(self::CODE_EXPIRY_MINUTES),
+            'expires_at' => now()->addMinutes(
+                config('authorization.login_code.expiry_minutes')
+            ),
             'resend_attempts' => $resendAttempts,
             'blocked_until' => null,
         ]);
