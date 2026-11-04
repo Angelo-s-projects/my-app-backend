@@ -47,7 +47,9 @@ class LoginTest extends TestCase
             ->for($this->user)
             ->withCode($code)
             ->create([
-                'expires_at' => now()->addMinutes(5),
+                'expires_at' => now()->addMinutes(
+                    config('authorization.login_code.expiry_minutes')
+                ),
             ]);
 
         $response = $this->postEndpoint(self::LOGIN_ENDPOINT, [
@@ -82,7 +84,9 @@ class LoginTest extends TestCase
             ->for($this->user)
             ->withCode($validCode)
             ->create([
-                'expires_at' => now()->addMinutes(5),
+                'expires_at' => now()->addMinutes(
+                    config('authorization.login_code.expiry_minutes')
+                ),
             ]);
 
         $this->postEndpoint(self::LOGIN_ENDPOINT, [
@@ -102,7 +106,9 @@ class LoginTest extends TestCase
             ->for($this->user)
             ->withCode($code)
             ->create([
-                'expires_at' => now()->addMinutes(5),
+                'expires_at' => now()->addMinutes(
+                    config('authorization.login_code.expiry_minutes')
+                ),
             ]);
 
         $this->postEndpoint(self::LOGIN_ENDPOINT, [

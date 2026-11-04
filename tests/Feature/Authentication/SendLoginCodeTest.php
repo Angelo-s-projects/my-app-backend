@@ -68,7 +68,7 @@ class SendLoginCodeTest extends TestCase
     {
         $this->sendLoginCode();
 
-        for ($attempt = 0; $attempt < 3; $attempt++) {
+        for ($attempt = 0; $attempt < config('authorization.login_code.max_resends'); $attempt++) {
             $this->sendLoginCode();
         }
 
@@ -78,7 +78,7 @@ class SendLoginCodeTest extends TestCase
 
         $this->assertDatabaseHas('login_codes', [
             'user_id' => $this->user->id,
-            'resend_attempts' => 3,
+            'resend_attempts' => config('authorization.login_code.max_resends'),
         ]);
 
         $this->assertNotNull(
@@ -90,7 +90,7 @@ class SendLoginCodeTest extends TestCase
     {
         $this->sendLoginCode();
 
-        for ($attempt = 0; $attempt < 3; $attempt++) {
+        for ($attempt = 0; $attempt < config('authorization.login_code.max_resends'); $attempt++) {
             $this->sendLoginCode();
         }
 
@@ -98,7 +98,7 @@ class SendLoginCodeTest extends TestCase
             'email' => $this->user->email,
         ], 429);
 
-        $this->travel(5)->minutes();
+        $this->travel(config('authorization.login_code.resend_cooldown_minutes'))->minutes();
 
         $this->sendLoginCode();
 
@@ -117,7 +117,9 @@ class SendLoginCodeTest extends TestCase
             ->for($this->user)
             ->withCode($oldCode)
             ->create([
-                'expires_at' => now()->addMinutes(5),
+                'expires_at' => now()->addMinutes(
+                    config('authorization.login_code.expiry_minutes')
+                ),
             ]);
 
         $this->sendLoginCode();
