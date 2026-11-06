@@ -7,8 +7,17 @@ use Tests\TestCase;
 
 class UserControllerTest extends TestCase
 {
+    public function test_get_users_returns_401_when_unauthenticated(): void
+    {
+        $response = $this->getEndpoint('/api/users', 401);
+
+        $response->assertJsonPath('code', 'UNAUTHENTICATED');
+    }
+
     public function test_get_users_returns_200(): void
     {
+        $this->createLoggedInUser();
+
         $this->getEndpoint('/api/users');
     }
 
@@ -16,17 +25,19 @@ class UserControllerTest extends TestCase
     {
         User::factory()->count(20)->create();
 
+        $this->createLoggedInUser();
+
         $response = $this->getEndpoint('/api/users');
 
         $response->assertJsonCount(15, 'data')
             ->assertJsonPath('current_page', 1)
             ->assertJsonPath('per_page', 15)
-            ->assertJsonPath('total', 20);
+            ->assertJsonPath('total', 21);
     }
 
     public function test_get_users_returns_expected_user_fields(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createLoggedInUser();
 
         $response = $this->getEndpoint('/api/users');
 
@@ -47,13 +58,5 @@ class UserControllerTest extends TestCase
             'last_name' => $user->last_name,
             'email' => $user->email,
         ]);
-    }
-
-    public function test_get_users_returns_empty_data_when_no_users_exist(): void
-    {
-        $response = $this->getEndpoint('/api/users');
-
-        $response->assertJsonCount(0, 'data')
-            ->assertJsonPath('total', 0);
     }
 }

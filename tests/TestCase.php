@@ -42,4 +42,12 @@ abstract class TestCase extends BaseTestCase
             'email' => fake()->unique()->safeEmail(),
         ], $attributes));
     }
+
+    protected function createLoggedInUser(array $attributes = []): User
+    {
+        $user = $this->createUser($attributes);
+        $this->actingAs($user, 'sanctum');
+
+        return $user;
+    }
 }
