@@ -24,6 +24,8 @@ paths:
       summary: List users
       description: Returns a paginated list of users.
       operationId: listUsers
+      security:
+        - BearerAuth: []
       parameters:
         - name: page
           in: query
@@ -40,6 +42,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedUsers'
+        '401':
+          description: Authentication required or invalid token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+              examples:
+                unauthenticated:
+                  summary: Missing or invalid token
+                  value:
+                    code: UNAUTHENTICATED
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -179,6 +192,13 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+      description: Laravel Sanctum personal access token.
+
   schemas:
     User:
       type: object
