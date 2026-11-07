@@ -96,4 +96,20 @@ class LoginCode extends Model
             STR_PAD_LEFT,
         );
     }
+
+    public static function findValidCode(string $email, string $code): ?self
+    {
+        return self::query()
+            ->whereHas('user', function ($query) use ($email) {
+                $query->where('email', $email);
+            })
+            ->where('expires_at', '>', now())
+            ->get()
+            ->first(
+                fn (self $loginCode) => Hash::check(
+                    $code,
+                    $loginCode->code,
+                )
+            );
+    }
 }

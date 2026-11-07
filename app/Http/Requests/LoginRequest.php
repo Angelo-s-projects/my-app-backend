@@ -15,6 +15,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'code' => ['required', 'string', 'regex:/^\d{5}$/'],
+            'email' => ['required', 'string', 'email'],
         ];
     }
 }

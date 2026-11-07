@@ -11,7 +11,6 @@ use App\Mail\LoginCodeMail;
 use App\Models\LoginCode;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 
 class AuthenticationController extends Controller
@@ -71,15 +70,9 @@ class AuthenticationController extends Controller
     {
         $validated = $request->validated();
 
-        $loginCodes = LoginCode::query()
-            ->where('expires_at', '>', now())
-            ->get();
-
-        $loginCode = $loginCodes->first(
-            fn (LoginCode $loginCode) => Hash::check(
-                $validated['code'],
-                $loginCode->code,
-            )
+        $loginCode = LoginCode::findValidCode(
+            $validated['email'],
+            $validated['code'],
         );
 
         if (! $loginCode || ! $loginCode->user) {
