@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginCodeRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Http\Resources\LoginResource;
 use App\Http\Responses\ApiResponse;
 use App\Mail\LoginCodeMail;
 use App\Models\LoginCode;
@@ -90,9 +91,9 @@ class AuthenticationController extends Controller
 
         return ApiResponse::success(
             code: 'LOGIN_SUCCESSFUL',
-            data: [
+            data: (new LoginResource([
                 'token' => $token,
-            ],
+            ]))->resolve(),
         );
     }
 }

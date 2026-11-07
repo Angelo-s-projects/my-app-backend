@@ -10,6 +10,7 @@ class ApiResponse
         string $code,
         mixed $data = null,
         int $status = 200,
+        array $meta = [],
     ): JsonResponse {
         $response = ['code' => $code];
 
@@ -17,7 +18,10 @@ class ApiResponse
             $response['data'] = $data;
         }
 
-        return response()->json($response, $status);
+        return response()->json([
+            ...$response,
+            ...$meta,
+        ], $status);
     }
 
     public static function error(
